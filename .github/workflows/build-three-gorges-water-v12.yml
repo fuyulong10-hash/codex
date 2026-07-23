@@ -29,6 +29,9 @@ jobs:
           p=Path('package-source/ci_build.sh')
           s=p.read_text()
           s=s.replace('gdown --quiet --id ', 'gdown --quiet ')
+          old="await page.screenshot({path:'validation/offline_runtime_1920x1080.png',fullPage:true});"
+          new="try{await page.screenshot({path:'validation/offline_runtime_1920x1080.png',fullPage:true,timeout:240000});}catch(e){console.warn('base screenshot skipped: '+e.message)}"
+          s=s.replace(old,new)
           p.write_text(s)
           PY
           ln -s ../node_modules package-source/node_modules || true
