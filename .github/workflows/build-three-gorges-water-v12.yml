@@ -1,0 +1,77 @@
+name: build-three-gorges-water-v12
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Reconstruct original offline package
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat package-source/ci_build.sh.gz.b64.part00 package-source/ci_build.sh.gz.b64.part01 package-source/ci_build.sh.gz.b64.part01b package-source/ci_build.sh.gz.b64.part02 package-source/ci_build.sh.gz.b64.part03 package-source/ci_build.sh.gz.b64.part04 | base64 -d | gzip -d > package-source/ci_build.sh
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('package-source/ci_build.sh')
+          s=p.read_text()
+          s=s.replace('gdown --quiet --id ', 'gdown --quiet ')
+          p.write_text(s)
+          PY
+          ln -s ../node_modules package-source/node_modules || true
+          chmod +x package-source/ci_build.sh
+          bash package-source/ci_build.sh
+
+      - name: Apply v1.2 robust water system
+        run: |
+          set -euxo pipefail
+          python package-source/patch_water_v12.py
+          node --check package-source/dist/Three_Gorges_Offline_Premium/app.bundle.js
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('package-source/dist/Three_Gorges_Offline_Premium/app.bundle.js').read_text()
+          checks={
+            'opaque_pbr_base':'transparent:!1,opacity:1,depthWrite:!0' in s,
+            'dual_layer':'surfaceGlaze' in s,
+            'no_legacy_shader':'uniform vec3 uDeep;uniform vec3 uShallow' not in s,
+            'diagnostics':'__TGD_WATER_DIAGNOSTICS' in s,
+            'no_auto_downgrade':'I2<24' not in s and 'lastFps<24' not in s,
+            'level_offset':'xh.position.y=WA.level-.35' in s,
+            'frustum_safe':'h.frustumCulled=!1' in s,
+          }
+          print(checks)
+          assert all(checks.values()), checks
+          PY
+
+      - name: Runtime visual contribution test
+        run: node package-source/validate_water_v12.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Three_Gorges_Offline_Premium_v1.2_Water_Fixed
+          path: package-source/dist/Three_Gorges_Offline_Premium_Package_v1.2.zip
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Three_Gorges_Water_v1.2_Validation
+          path: |
+            package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_runtime_1600x900.png
+            package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_runtime_report.json
+            package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_browser_console.log
+          if-no-files-found: warn
+          retention-days: 7
