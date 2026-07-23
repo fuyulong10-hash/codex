@@ -18,7 +18,7 @@ page.on('console',m=>logs.push(`[${m.type()}] ${m.text()}`));
 page.on('pageerror',e=>logs.push(`[pageerror] ${e.stack||e}`));
 await page.goto(pathToFileURL(path.join(root,'index.html')).href,{waitUntil:'load',timeout:240000});
 await page.waitForFunction(()=>window.__TGD_READY===true,null,{timeout:240000});
-await page.waitForTimeout(5000);
+await page.waitForTimeout(6000);
 
 const report=await page.evaluate(()=>{
   const t=window.__TGD_WATER_DIAGNOSTICS;
@@ -47,12 +47,16 @@ const report=await page.evaluate(()=>{
     visible:o.visible,frustumCulled:o.frustumCulled,renderOrder:o.renderOrder,
     position:o.position.toArray(),materialType:o.material.type,transparent:o.material.transparent,
     opacity:o.material.opacity,depthWrite:o.material.depthWrite,depthTest:o.material.depthTest,
-    robustWater:o.material.userData?.robustWater===true,childCount:o.children.length,
+    robustWater:o.material.userData?.robustWater===true,
+    unlitBase:o.material.userData?.unlitBase===true,
+    guaranteedVisible:o.userData.waterBase?.guaranteedVisible===true,
+    childCount:o.children.length,
     glazeType:o.userData.surfaceGlaze?.material?.type||null,
     glazeOpacity:o.userData.surfaceGlaze?.material?.opacity??null
   });
   return {
     ready:window.__TGD_READY,
+    mode:t.mode,
     premium:window.__TGD_PREMIUM_ASSETS,
     quality:document.querySelector('#quality')?.value,
     terrain:document.querySelector('#terrainStatus')?.textContent,
@@ -68,17 +72,18 @@ fs.writeFileSync(path.join(out,'water_v12_browser_console.log'),logs.join('\n'))
 await browser.close();
 
 const failures=[];
+if(report.mode!=='unlit-opaque-base-plus-pbr-glaze')failures.push(`unexpected water mode: ${report.mode}`);
 for(const [name,w] of Object.entries({upstream:report.upstream,downstream:report.downstream})){
   if(!w.visible)failures.push(`${name} not visible`);
-  if(w.materialType!=='MeshPhysicalMaterial')failures.push(`${name} base is not MeshPhysicalMaterial`);
+  if(w.materialType!=='MeshBasicMaterial')failures.push(`${name} base is not MeshBasicMaterial`);
   if(w.transparent!==false||w.opacity!==1||w.depthWrite!==true)failures.push(`${name} base is not opaque/depth-writing`);
-  if(!w.robustWater)failures.push(`${name} robust water flag missing`);
-  if(w.childCount<1||w.glazeType!=='MeshPhysicalMaterial')failures.push(`${name} highlight glaze missing`);
+  if(!w.robustWater||!w.unlitBase||!w.guaranteedVisible)failures.push(`${name} guaranteed-visible flags missing`);
+  if(w.childCount<1||w.glazeType!=='MeshPhysicalMaterial')failures.push(`${name} PBR highlight glaze missing`);
   if(w.frustumCulled!==false)failures.push(`${name} frustum culling not disabled`);
 }
 if(report.quality!=='high')failures.push(`quality is ${report.quality}, expected high`);
-if(report.visualContribution.changedRatio<0.001)failures.push(`water visual contribution too small: ${report.visualContribution.changedRatio}`);
-if(report.visualContribution.meanRgbDifference<0.15)failures.push(`water mean RGB contribution too small: ${report.visualContribution.meanRgbDifference}`);
+if(report.visualContribution.changedRatio<0.002)failures.push(`water visual contribution too small: ${report.visualContribution.changedRatio}`);
+if(report.visualContribution.meanRgbDifference<0.20)failures.push(`water mean RGB contribution too small: ${report.visualContribution.meanRgbDifference}`);
 if(logs.some(x=>x.includes('[pageerror]')))failures.push('page error detected');
 if(failures.length)throw new Error(failures.join('; ')+'\n'+JSON.stringify(report,null,2)+'\n'+logs.join('\n'));
 console.log(JSON.stringify(report,null,2));
