@@ -10,6 +10,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install parser dependency
+        run: pip install beautifulsoup4
       - name: Fetch and inspect source assets
         shell: bash
         run: |
@@ -25,7 +27,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           from bs4 import BeautifulSoup
-          import json, re, zipfile
+          import json, zipfile
           d=Path('diag')
           for name in ['poly_dam_wall.json','poly_concrete.json','poly_rock_07.json']:
               obj=json.loads((d/name).read_text())
@@ -43,8 +45,7 @@ jobs:
                   (d/(zname+'.listing.txt')).write_text('\n'.join(f'{i.file_size}\t{i.filename}' for i in z.infolist()))
           html=(d/'quaternius_ships_page.html').read_text(errors='replace')
           soup=BeautifulSoup(html,'html.parser')
-          links=[]
-          for a in soup.find_all('a',href=True): links.append((a.get_text(' ',strip=True),a['href']))
+          links=[(a.get_text(' ',strip=True),a['href']) for a in soup.find_all('a',href=True)]
           scripts=[s.get('src') for s in soup.find_all('script') if s.get('src')]
           (d/'quaternius_links.txt').write_text('\n'.join(f'{t}\t{h}' for t,h in links)+'\nSCRIPTS\n'+'\n'.join(scripts))
           print((d/'quaternius_links.txt').read_text())
@@ -52,8 +53,6 @@ jobs:
           ls -lh diag
         env:
           PYTHONUNBUFFERED: '1'
-      - name: Install parser dependency
-        run: pip install beautifulsoup4
       - uses: actions/upload-artifact@v4
         if: always()
         with:
