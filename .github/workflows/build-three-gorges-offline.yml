@@ -1,0 +1,36 @@
+name: build-three-gorges-offline
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Reconstruct and run package builder
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat package-source/ci_build.sh.gz.b64.part00 | base64 -d | gzip -d > package-source/ci_build.sh
+          chmod +x package-source/ci_build.sh
+          bash package-source/ci_build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Three_Gorges_Offline_Premium_Package
+          path: package-source/dist/Three_Gorges_Offline_Premium_Package.zip
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
