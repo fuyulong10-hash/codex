@@ -1,0 +1,1 @@
+Capture compressed builder chunks for byte-level comparison.
