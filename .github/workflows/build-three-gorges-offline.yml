@@ -22,6 +22,8 @@ jobs:
       - name: Reconstruct and run package builder
         shell: bash
         run: |
+          : > package-build.log
+          exec > >(tee -a package-build.log) 2>&1
           set -euxo pipefail
           cat package-source/ci_build.sh.gz.b64.part00 | base64 -d | gzip -d > package-source/ci_build.sh
           python - <<'PY'
@@ -35,9 +37,8 @@ jobs:
           PY
           chmod +x package-source/ci_build.sh
           set +e
-          bash package-source/ci_build.sh > package-build.log 2>&1
+          bash package-source/ci_build.sh
           status=$?
-          tail -n 120 package-build.log
           exit $status
 
       - uses: actions/upload-artifact@v4
@@ -55,6 +56,7 @@ jobs:
           name: Three_Gorges_Offline_Build_Diagnostics
           path: |
             package-build.log
+            package-source/ci_build.sh
             package-source/dist/Three_Gorges_Offline_Premium/validation/**
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
