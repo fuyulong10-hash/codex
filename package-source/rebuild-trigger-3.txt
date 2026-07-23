@@ -1,0 +1,1 @@
+Build retry with first-command diagnostics capture.
