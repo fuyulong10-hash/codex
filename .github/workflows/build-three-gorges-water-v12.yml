@@ -20,6 +20,8 @@ jobs:
       - name: Reconstruct original offline package
         shell: bash
         run: |
+          : > base-build-v12.log
+          exec > >(tee -a base-build-v12.log) 2>&1
           set -euxo pipefail
           cat package-source/ci_build.sh.gz.b64.part00 package-source/ci_build.sh.gz.b64.part01 package-source/ci_build.sh.gz.b64.part01b package-source/ci_build.sh.gz.b64.part02 package-source/ci_build.sh.gz.b64.part03 package-source/ci_build.sh.gz.b64.part04 | base64 -d | gzip -d > package-source/ci_build.sh
           python - <<'PY'
@@ -31,7 +33,11 @@ jobs:
           PY
           ln -s ../node_modules package-source/node_modules || true
           chmod +x package-source/ci_build.sh
+          set +e
           bash package-source/ci_build.sh
+          status=$?
+          echo "base builder exit status: $status"
+          exit $status
 
       - name: Apply v1.2 robust water system
         run: |
@@ -58,6 +64,7 @@ jobs:
         run: node package-source/validate_water_v12.mjs
 
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: Three_Gorges_Offline_Premium_v1.2_Water_Fixed
           path: package-source/dist/Three_Gorges_Offline_Premium_Package_v1.2.zip
@@ -70,6 +77,8 @@ jobs:
         with:
           name: Three_Gorges_Water_v1.2_Validation
           path: |
+            base-build-v12.log
+            package-source/ci_build.sh
             package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_runtime_1600x900.png
             package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_runtime_report.json
             package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_browser_console.log
