@@ -104,7 +104,7 @@ def pack() -> None:
     with zipfile.ZipFile(ZIP, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6, strict_timestamps=False) as z:
         for p in sorted(PKG.rglob("*")):
             if p.is_file():
-                z.write(p, (PKG.name / p.relative_to(PKG)).as_posix())
+                z.write(p, (Path(PKG.name) / p.relative_to(PKG)).as_posix())
     print(json.dumps({"zip": str(ZIP), "size": ZIP.stat().st_size, "sha256": hashlib.sha256(ZIP.read_bytes()).hexdigest()}))
 
 
