@@ -43,7 +43,10 @@ jobs:
           exit $status
 
       - name: Apply v1.2 robust water system
+        shell: bash
         run: |
+          : > patch-water-v12.log
+          exec > >(tee -a patch-water-v12.log) 2>&1
           set -euxo pipefail
           python package-source/patch_water_v12.py
           node --check package-source/dist/Three_Gorges_Offline_Premium/app.bundle.js
@@ -64,7 +67,12 @@ jobs:
           PY
 
       - name: Runtime visual contribution test
-        run: node package-source/validate_water_v12.mjs
+        shell: bash
+        run: |
+          : > runtime-water-v12.log
+          exec > >(tee -a runtime-water-v12.log) 2>&1
+          set -euxo pipefail
+          node package-source/validate_water_v12.mjs
 
       - uses: actions/upload-artifact@v4
         if: success()
@@ -81,6 +89,8 @@ jobs:
           name: Three_Gorges_Water_v1.2_Validation
           path: |
             base-build-v12.log
+            patch-water-v12.log
+            runtime-water-v12.log
             package-source/ci_build.sh
             package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_runtime_1600x900.png
             package-source/dist/Three_Gorges_Offline_Premium/validation/water_v12_runtime_report.json
