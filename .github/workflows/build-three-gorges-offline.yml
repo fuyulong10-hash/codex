@@ -27,6 +27,7 @@ jobs:
           set -euxo pipefail
           ls -l package-source/ci_build.sh.gz.b64.part00 package-source/ci_build.sh.gz.b64.part01 package-source/ci_build.sh.gz.b64.part01b package-source/ci_build.sh.gz.b64.part02 package-source/ci_build.sh.gz.b64.part03 package-source/ci_build.sh.gz.b64.part04
           cat package-source/ci_build.sh.gz.b64.part00 package-source/ci_build.sh.gz.b64.part01 package-source/ci_build.sh.gz.b64.part01b package-source/ci_build.sh.gz.b64.part02 package-source/ci_build.sh.gz.b64.part03 package-source/ci_build.sh.gz.b64.part04 | base64 -d | gzip -d > package-source/ci_build.sh
+          sed -i -E 's/gdown --quiet --id ([^ ]+) -O/gdown --quiet \1 -O/g' package-source/ci_build.sh
           chmod +x package-source/ci_build.sh
           set +e
           bash package-source/ci_build.sh
