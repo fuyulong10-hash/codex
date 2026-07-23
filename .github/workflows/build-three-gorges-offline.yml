@@ -49,6 +49,7 @@ jobs:
           path: |
             package-build.log
             package-source/ci_build.sh
+            package-source/ci_build.sh.gz.b64.part*
             package-source/dist/Three_Gorges_Offline_Premium/validation/**
           if-no-files-found: error
           retention-days: 7
