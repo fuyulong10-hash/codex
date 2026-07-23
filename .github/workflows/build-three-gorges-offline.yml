@@ -25,16 +25,7 @@ jobs:
           : > package-build.log
           exec > >(tee -a package-build.log) 2>&1
           set -euxo pipefail
-          cat package-source/ci_build.sh.gz.b64.part00 | base64 -d | gzip -d > package-source/ci_build.sh
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('package-source/ci_build.sh')
-          s=p.read_text()
-          s=s.replace('cd "$(git rev-parse --show-toplevel)"','REPO_ROOT="$(git rev-parse --show-toplevel)"\ncd "$REPO_ROOT"',1)
-          s=s.replace("echo '===== ","cd \"$REPO_ROOT\"\n\necho '===== ")
-          s=s.replace('"},12000);", "},30000);", 1)','"},12000);", "},120000);", 1)')
-          p.write_text(s)
-          PY
+          cat package-source/ci_build.sh.gz.b64.part* | base64 -d | gzip -d > package-source/ci_build.sh
           chmod +x package-source/ci_build.sh
           set +e
           bash package-source/ci_build.sh
