@@ -54,12 +54,14 @@ jobs:
           from pathlib import Path
           s=Path('package-source/dist/Three_Gorges_Offline_Premium/app.bundle.js').read_text()
           checks={
-            'opaque_pbr_base':'transparent:!1,opacity:1,depthWrite:!0' in s,
+            'mesh_basic_base':'new uV({color:l,transparent:!1,opacity:1,depthWrite:!0' in s,
+            'unlit_tonemap_off':'toneMapped:!1' in s,
             'dual_layer':'surfaceGlaze' in s,
             'no_legacy_shader':'uniform vec3 uDeep;uniform vec3 uShallow' not in s,
-            'diagnostics':'__TGD_WATER_DIAGNOSTICS' in s,
+            'diagnostics_mode':'unlit-opaque-base-plus-pbr-glaze' in s,
             'no_auto_downgrade':'I2<24' not in s and 'lastFps<24' not in s,
-            'level_offset':'xh.position.y=WA.level-.35' in s,
+            'raised_surface':'xh.position.y=WA.level+.65' in s,
+            'widened_surface':'U=TW(a)*1.24*Z' in s,
             'frustum_safe':'h.frustumCulled=!1' in s,
           }
           print(checks)
