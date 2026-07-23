@@ -24,13 +24,37 @@ jobs:
         run: |
           set -euxo pipefail
           cat package-source/ci_build.sh.gz.b64.part00 | base64 -d | gzip -d > package-source/ci_build.sh
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('package-source/ci_build.sh')
+          s=p.read_text()
+          s=s.replace('cd "$(git rev-parse --show-toplevel)"','REPO_ROOT="$(git rev-parse --show-toplevel)"\ncd "$REPO_ROOT"',1)
+          s=s.replace("echo '===== ","cd \"$REPO_ROOT\"\n\necho '===== ")
+          s=s.replace('"},12000);", "},30000);", 1)','"},12000);", "},120000);", 1)')
+          p.write_text(s)
+          PY
           chmod +x package-source/ci_build.sh
-          bash package-source/ci_build.sh
+          set +e
+          bash package-source/ci_build.sh > package-build.log 2>&1
+          status=$?
+          tail -n 120 package-build.log
+          exit $status
 
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: Three_Gorges_Offline_Premium_Package
           path: package-source/dist/Three_Gorges_Offline_Premium_Package.zip
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Three_Gorges_Offline_Build_Diagnostics
+          path: |
+            package-build.log
+            package-source/dist/Three_Gorges_Offline_Premium/validation/**
+          if-no-files-found: warn
+          retention-days: 7
